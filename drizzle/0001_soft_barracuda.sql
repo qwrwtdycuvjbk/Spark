@@ -1,0 +1,1 @@
+CREATE INDEX `idx_records_kind_updated` ON `records` (`kind`,`updated`);

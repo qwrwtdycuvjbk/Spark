@@ -4,7 +4,7 @@ import {readFileSync,readdirSync} from 'node:fs';
 import worker from '../dist/server/index.js';
 const sqlite=new DatabaseSync(':memory:');for(const f of readdirSync('drizzle').filter(f=>f.endsWith('.sql')))sqlite.exec(readFileSync('drizzle/'+f,'utf8'));
 const env={OWNER_EMAIL:'owner@example.com',CREDENTIAL_ENCRYPTION_KEY:Buffer.alloc(32,1).toString('base64'),DB:{prepare(sql){let args=[];return {bind(...a){args=a;return this},async first(){return sqlite.prepare(sql).get(...args)},async all(){return {results:sqlite.prepare(sql).all(...args)}},async run(){const r=sqlite.prepare(sql).run(...args);return {meta:{changes:r.changes}}}}}}};
-let calls=0;globalThis.fetch=async(url,options)=>{calls++;const b=JSON.parse(options.body);assert.equal(options.headers['x-api-key'],'test-apollo-secret');if(url.endsWith('mixed_companies/search')){assert.deepEqual(b.organization_num_employees_ranges,['20,200']);assert.deepEqual(b.organization_locations,['United States']);assert.equal(b.per_page,40);return Response.json({organizations:[{id:'org1',name:'Test Tech',website_url:'https://example.com',estimated_num_employees:40}]})}if(url.endsWith('mixed_people/api_search'))return Response.json({people:[{id:'p1',first_name:'Alex',title:'Head of Talent'}]});if(url.endsWith('people/match'))return Response.json({person:{id:'p1',organization_id:'org1',name:'Alex Test',first_name:'Alex',email:'alex@example.com',email_status:'verified',title:'Head of Talent'}});throw Error('Unexpected external call')};
+let calls=0;globalThis.fetch=async(url,options)=>{calls++;const b=JSON.parse(options.body);assert.equal(options.headers['x-api-key'],'test-apollo-secret');if(url.endsWith('mixed_companies/search')){assert.deepEqual(b.organization_num_employees_ranges,['20,500']);assert.deepEqual(b.organization_locations,['United States']);assert.equal(b.per_page,40);return Response.json({organizations:[{id:'org1',name:'Test Tech',website_url:'https://example.com',estimated_num_employees:40}]})}if(url.endsWith('mixed_people/api_search'))return Response.json({people:[{id:'p1',first_name:'Alex',title:'Head of Talent'}]});if(url.endsWith('people/match'))return Response.json({person:{id:'p1',organization_id:'org1',name:'Alex Test',first_name:'Alex',email:'alex@example.com',email_status:'verified',title:'Head of Talent'}});throw Error('Unexpected external call')};
 async function request(path,body,headers={}){const req=new Request('https://app.test/api/'+path,{method:body?'POST':'GET',headers:{'oai-authenticated-user-email':'owner@example.com',...(body?{'content-type':'application/json',origin:'https://app.test'}:{}),...headers},body:body?JSON.stringify(body):undefined});const r=await worker.fetch(req,env);return {status:r.status,data:await r.json()}}
 assert.equal((await request('state',null,{'oai-authenticated-user-email':'other@example.com'})).status,403);
 assert.equal((await request('connect',{key:'test-apollo-secret'},{origin:'https://evil.test'})).status,403);
@@ -28,3 +28,12 @@ await request('prospect',{id:p.id,revision:p.revision,action:'suppress'});p=(awa
 await request('discover',{});assert.equal((await request('state')).data.prospects[0].status,'Opted out');
 assert.equal((await request('disconnect',{})).status,200);assert.equal((await request('state')).data.connected,false);assert.equal((await request('discover',{})).status,409);
 console.log('Passed: owner access, CSRF, encrypted key, discovery filters, deduplication, persistence, enrichment, approval validation, concurrent revision checks, approval invalidation, suppression, disconnect, and blocked sending.');
+await request('connect',{key:'test-apollo-secret'});
+const month=(await request('state')).data.budget.month;
+sqlite.prepare('UPDATE settings SET value=? WHERE key=?').run('99','credits:'+month);
+assert.equal((await request('discover',{})).status,200);
+assert.equal((await request('state')).data.budget.used,100);
+const before=calls;assert.equal((await request('discover',{})).status,429);assert.equal(calls,before);
+assert.equal((await request('connect',{key:'test-apollo-secret'})).status,200);
+assert.equal((await request('state')).data.budget.used,100);
+console.log('Passed: 100-credit boundary blocks paid calls before Apollo; reconnect does not reset budget; free connection test remains available.');

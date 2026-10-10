@@ -1,0 +1,17 @@
+import assert from 'node:assert/strict';
+import {classifyJob} from '../src/ats.js';
+const base={title:'Software Engineer',isListed:true,isRemote:true,workplaceType:'Remote',location:'Remote - Global',jobUrl:'https://jobs.ashbyhq.com/test/123'};
+assert.equal(classifyJob(base).worldwide,true);
+assert.equal(classifyJob({...base,location:'Remote - United States'}).worldwide,false);
+assert.equal(classifyJob({...base,location:'India (Anywhere)'}).worldwide,false);
+assert.equal(classifyJob({...base,location:'Remote'}).worldwide,false);
+assert.equal(classifyJob({...base,location:'Global',secondaryLocations:[{location:'United States'}]}).worldwide,false);
+assert.equal(classifyJob({...base,workplaceType:'Hybrid'}),null);
+assert.equal(classifyJob({...base,workplaceType:'OnSite'}),null);
+assert.equal(classifyJob({...base,isListed:false}),null);
+assert.equal(classifyJob({...base,title:'Account Executive'}),null);
+assert.equal(classifyJob({...base,title:'QA Specialist',department:'Clinical Operations'}),null);
+assert.equal(classifyJob({...base,title:'QA Engineer',department:'Engineering'}).title,'QA Engineer');
+assert.equal(classifyJob({...base,jobUrl:'javascript:alert(1)'}),null);
+assert.equal(classifyJob({...base,jobUrl:'https://untrusted.example/test'}),null);
+console.log('Passed: remote/onsite/hybrid classification, technical roles, geography distinctions, and source URL validation.');

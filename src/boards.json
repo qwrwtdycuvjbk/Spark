@@ -1,0 +1,230 @@
+[
+  {
+    "slug": "elevenlabs",
+    "name": "ElevenLabs"
+  },
+  {
+    "slug": "numeral",
+    "name": "Numeral"
+  },
+  {
+    "slug": "partyhat",
+    "name": "Partyhat"
+  },
+  {
+    "slug": "Mintlify",
+    "name": "Mintlify"
+  },
+  {
+    "slug": "percona",
+    "name": "Percona"
+  },
+  {
+    "slug": "runpod",
+    "name": "Runpod"
+  },
+  {
+    "slug": "morpho",
+    "name": "Morpho"
+  },
+  {
+    "slug": "dehazelabs",
+    "name": "DehazeLabs"
+  },
+  {
+    "slug": "whitecircle",
+    "name": "White Circle"
+  },
+  {
+    "slug": "flipper",
+    "name": "Flipper"
+  },
+  {
+    "slug": "realmalliance",
+    "name": "Realm"
+  },
+  {
+    "slug": "dash0",
+    "name": "Dash0"
+  },
+  {
+    "slug": "OpenAge",
+    "name": "OpenAge"
+  },
+  {
+    "slug": "scoreplay",
+    "name": "ScorePlay"
+  },
+  {
+    "slug": "posthog",
+    "name": "PostHog"
+  },
+  {
+    "slug": "deel",
+    "name": "Deel"
+  },
+  {
+    "slug": "owner",
+    "name": "Owner.com"
+  },
+  {
+    "slug": "chamelio",
+    "name": "Chamelio"
+  },
+  {
+    "slug": "CasperStudios",
+    "name": "Casper Studios"
+  },
+  {
+    "slug": "bespokelabs",
+    "name": "Bespoke Labs"
+  },
+  {
+    "slug": "emergence",
+    "name": "Emergence Software"
+  },
+  {
+    "slug": "trust-wallet",
+    "name": "Trust Wallet"
+  },
+  {
+    "slug": "blink",
+    "name": "Blink Tech"
+  },
+  {
+    "slug": "colonist",
+    "name": "Colonist"
+  },
+  {
+    "slug": "inflectionio",
+    "name": "Inflection.io"
+  },
+  {
+    "slug": "linear",
+    "name": "Linear"
+  },
+  {
+    "slug": "ashby",
+    "name": "Ashby"
+  },
+  {
+    "slug": "notion",
+    "name": "Notion"
+  },
+  {
+    "slug": "ramp",
+    "name": "Ramp"
+  },
+  {
+    "slug": "supabase",
+    "name": "Supabase"
+  },
+  {
+    "slug": "vercel",
+    "name": "Vercel"
+  },
+  {
+    "slug": "render",
+    "name": "Render"
+  },
+  {
+    "slug": "railway",
+    "name": "Railway"
+  },
+  {
+    "slug": "resend",
+    "name": "Resend"
+  },
+  {
+    "slug": "clerk",
+    "name": "Clerk"
+  },
+  {
+    "slug": "neon",
+    "name": "Neon"
+  },
+  {
+    "slug": "inngest",
+    "name": "Inngest"
+  },
+  {
+    "slug": "docker",
+    "name": "Docker"
+  },
+  {
+    "slug": "temporal",
+    "name": "Temporal"
+  },
+  {
+    "slug": "livekit",
+    "name": "LiveKit"
+  },
+  {
+    "slug": "lovable",
+    "name": "Lovable"
+  },
+  {
+    "slug": "replit",
+    "name": "Replit"
+  },
+  {
+    "slug": "modal",
+    "name": "Modal"
+  },
+  {
+    "slug": "baseten",
+    "name": "Baseten"
+  },
+  {
+    "slug": "gitbook",
+    "name": "GitBook"
+  },
+  {
+    "slug": "attio",
+    "name": "Attio"
+  },
+  {
+    "slug": "plain",
+    "name": "Plain"
+  },
+  {
+    "slug": "incident",
+    "name": "incident.io"
+  },
+  {
+    "slug": "zapier",
+    "name": "Zapier"
+  },
+  {
+    "slug": "sentry",
+    "name": "Sentry"
+  },
+  {
+    "slug": "cohere",
+    "name": "Cohere"
+  },
+  {
+    "slug": "imprint",
+    "name": "Imprint"
+  },
+  {
+    "slug": "mercury",
+    "name": "Mercury"
+  },
+  {
+    "slug": "polar",
+    "name": "Polar"
+  },
+  {
+    "slug": "langchain",
+    "name": "LangChain"
+  },
+  {
+    "slug": "clickhouse",
+    "name": "ClickHouse"
+  },
+  {
+    "slug": "airbyte",
+    "name": "Airbyte"
+  }
+]

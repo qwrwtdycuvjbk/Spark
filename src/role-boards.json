@@ -1,0 +1,19 @@
+[
+  {"ats":"greenhouse","slug":"stripe","name":"Stripe"},
+  {"ats":"greenhouse","slug":"airbnb","name":"Airbnb"},
+  {"ats":"greenhouse","slug":"coinbase","name":"Coinbase"},
+  {"ats":"greenhouse","slug":"robinhood","name":"Robinhood"},
+  {"ats":"greenhouse","slug":"pinterest","name":"Pinterest"},
+  {"ats":"greenhouse","slug":"databricks","name":"Databricks"},
+  {"ats":"greenhouse","slug":"cloudflare","name":"Cloudflare"},
+  {"ats":"greenhouse","slug":"okta","name":"Okta"},
+  {"ats":"greenhouse","slug":"twilio","name":"Twilio"},
+  {"ats":"greenhouse","slug":"mongodb","name":"MongoDB"},
+  {"ats":"greenhouse","slug":"chime","name":"Chime"},
+  {"ats":"greenhouse","slug":"scaleai","name":"Scale AI"},
+  {"ats":"greenhouse","slug":"datadog","name":"Datadog"},
+  {"ats":"greenhouse","slug":"kalshi","name":"Kalshi"},
+  {"ats":"greenhouse","slug":"andurilindustries","name":"Anduril"},
+  {"ats":"ashby","slug":"openai","name":"OpenAI"},
+  {"ats":"ashby","slug":"perplexity","name":"Perplexity"}
+]

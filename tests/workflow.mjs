@@ -1,7 +1,34 @@
 import assert from 'node:assert/strict';
 import {DatabaseSync} from 'node:sqlite';
 import {readFileSync,readdirSync} from 'node:fs';
+import boards from '../src/boards.json' with {type:'json'};
 import worker from '../dist/server/index.js';
+const ashbyJob=(over={})=>({title:'Software Engineer',isListed:true,isRemote:true,workplaceType:'Remote',location:'Remote - Global',jobUrl:'https://jobs.ashbyhq.com/test/123',publishedAt:'2026-10-01T00:00:00Z',...over});
+const wwrRss=`<?xml version="1.0"?><rss><channel><item><title>Acme: Software Engineer</title><region>Anywhere in the World</region><category>Full-Stack Programming</category><link>https://weworkremotely.com/remote-jobs/acme-software-engineer</link><pubDate>Tue, 29 Sep 2026 07:30:41 +0000</pubDate></item><item><title>LocalOnly: Software Engineer</title><region>USA Only</region><category>Full-Stack Programming</category><link>https://weworkremotely.com/remote-jobs/local-only</link><pubDate>Tue, 29 Sep 2026 07:30:41 +0000</pubDate></item></channel></rss>`;
+const remoteSitemap=`<?xml version="1.0"?><urlset><url><loc>https://remote.io/remote-jobs/software-development/software-engineer-at-northstar-1</loc></url><url><loc>https://remote.io/remote-jobs/sales-partnerships/account-executive-1</loc></url></urlset>`;
+const remoteHtml=`<html><script type="application/ld+json">{"@context":"https://schema.org","@type":"JobPosting","title":"Software Engineer","datePosted":"2026-10-12","hiringOrganization":{"@type":"Organization","name":"Northstar"},"applicantLocationRequirements":{"@type":"Country","name":"Worldwide"},"jobLocationType":"TELECOMMUTE","url":"https://remote.io/remote-jobs/software-development/software-engineer-at-northstar-1"}</script></html>`;
+const himalayaJob={title:'Software Engineer',companyName:'Lingo',companySlug:'lingo',locationRestrictions:[],pubDate:Math.floor(Date.parse('2026-10-09T12:00:00Z')/1000),applicationLink:'https://himalayas.app/companies/lingo/jobs/software-engineer',categories:['Engineering']};
+function boardResponse(url){
+ const href=String(url);
+ if(href.includes('weworkremotely.com'))return new Response(wwrRss,{headers:{'content-type':'application/rss+xml'}});
+ if(href.includes('himalayas.app'))return Response.json({jobs:[himalayaJob],totalCount:1,limit:20});
+ if(href.includes('sitemap-jobs.xml'))return new Response(remoteSitemap,{headers:{'content-type':'application/xml'}});
+ if(href.includes('remote.io/remote-jobs/'))return new Response(remoteHtml,{headers:{'content-type':'text/html'}});
+ return null;
+}
+function mockBoards(){
+ return async(url,options)=>{
+  const board=boardResponse(url);if(board)return board;
+  if(typeof url==='string'&&url.includes('apollo.io')){
+   const b=JSON.parse(options.body);
+   if(url.endsWith('mixed_companies/search'))return Response.json({organizations:[{id:'org1',name:'Test Tech',website_url:'https://example.com',estimated_num_employees:40}]});
+   if(url.endsWith('mixed_people/api_search'))return Response.json({people:[{id:'p1',first_name:'Alex',title:'Head of Talent'}]});
+   if(url.endsWith('people/match'))return Response.json({person:{id:'p1',organization_id:'org1',name:'Alex Test',first_name:'Alex',email:'alex@example.com',email_status:'verified',title:'Head of Talent'}});
+   throw Error('Unexpected Apollo call');
+  }
+  throw Error('Unexpected external call '+url);
+ };
+}
 const sqlite=new DatabaseSync(':memory:');for(const f of readdirSync('drizzle').filter(f=>f.endsWith('.sql')))sqlite.exec(readFileSync('drizzle/'+f,'utf8'));
 const env={OWNER_EMAIL:'owner@example.com',CREDENTIAL_ENCRYPTION_KEY:Buffer.alloc(32,1).toString('base64'),DB:{prepare(sql){let args=[];return {bind(...a){args=a;return this},async first(){return sqlite.prepare(sql).get(...args)},async all(){return {results:sqlite.prepare(sql).all(...args)}},async run(){const r=sqlite.prepare(sql).run(...args);return {meta:{changes:r.changes}}}}}}};
 let calls=0;globalThis.fetch=async(url,options)=>{calls++;const b=JSON.parse(options.body);assert.equal(options.headers['x-api-key'],'test-apollo-secret');if(url.endsWith('mixed_companies/search')){assert.deepEqual(b.organization_num_employees_ranges,['20,500']);assert.deepEqual(b.organization_locations,['United States']);assert.equal(b.per_page,40);return Response.json({organizations:[{id:'org1',name:'Test Tech',website_url:'https://example.com',estimated_num_employees:40}]})}if(url.endsWith('mixed_people/api_search'))return Response.json({people:[{id:'p1',first_name:'Alex',title:'Head of Talent'}]});if(url.endsWith('people/match'))return Response.json({person:{id:'p1',organization_id:'org1',name:'Alex Test',first_name:'Alex',email:'alex@example.com',email_status:'verified',title:'Head of Talent'}});throw Error('Unexpected external call')};
@@ -37,17 +64,17 @@ const before=calls;assert.equal((await request('discover',{source:'apollo'})).st
 assert.equal((await request('connect',{key:'test-apollo-secret'})).status,200);
 assert.equal((await request('state')).data.budget.used,100);
 console.log('Passed: 100-credit boundary blocks paid calls before Apollo; reconnect does not reset budget; free connection test remains available.');
-let atsCalls=0;globalThis.fetch=async(url)=>{assert(url.startsWith('https://api.ashbyhq.com/posting-api/job-board/'));atsCalls++;return Response.json({jobs:[{title:'Software Engineer',isListed:true,isRemote:true,workplaceType:'Remote',location:'Remote - Global',jobUrl:'https://jobs.ashbyhq.com/test/123',publishedAt:'2026-10-01T00:00:00Z'}]})};
+globalThis.fetch=mockBoards();
 const beforeATS=(await request('state')).data.budget.used;
-const ats=await request('discover',{source:'ats',scope:'remote'});assert.equal(ats.status,200);assert.equal(ats.data.added,40);assert.equal(ats.data.checked,57);assert.equal(ats.data.failed,0);assert.equal((await request('state')).data.budget.used,beforeATS);
-const atsNext=await request('discover',{source:'ats',scope:'worldwide'});assert.equal(atsNext.status,200);assert.equal(atsNext.data.added,17);assert.equal(atsNext.data.refreshed,40);
+const ats=await request('discover',{source:'ats',scope:'remote'});assert.equal(ats.status,200);assert.equal(ats.data.added,3);assert.equal(ats.data.checked,3);assert.equal(ats.data.failed,0);assert.equal(ats.data.counts.wwr,1);assert.equal(ats.data.counts.himalayas,1);assert.equal(ats.data.counts.remoteio,1);assert.equal((await request('state')).data.budget.used,beforeATS);
+const atsNext=await request('discover',{source:'ats',scope:'worldwide'});assert.equal(atsNext.status,200);assert.equal(atsNext.data.added,0);assert.equal(atsNext.data.refreshed,3);
 assert.equal((await request('discover',{source:'ats',scope:'invalid'})).status,400);
 const counts=(await request('state')).data.prospects.length;
 globalThis.fetch=async()=>{throw Error('network unavailable')};assert.equal((await request('discover',{source:'ats',scope:'remote'})).status,502);assert.equal((await request('state')).data.prospects.length,counts);
-console.log('Passed: ATS scan, 40-company cap, deduplication/refresh, no Apollo credit use even at limit, invalid scope, and source failures.');
-let atsProspect=(await request('state')).data.prospects.find(p=>p.id.startsWith('ats:'));
+console.log('Passed: global board scan, no company cap, deduplication/refresh, no Apollo credit use even at limit, invalid scope, and source failures.');
+let atsProspect=(await request('state')).data.prospects.find(p=>p.id.startsWith('board:'));
 sqlite.prepare('UPDATE settings SET value=? WHERE key=?').run('0','credits:'+month);
-globalThis.fetch=async(url,options)=>{const b=JSON.parse(options.body);if(url.endsWith('mixed_companies/search'))return Response.json({organizations:[{id:'matched-org',name:atsProspect.company,website_url:'https://example.com',country:'USA'}]});if(url.endsWith('mixed_people/api_search')){assert.deepEqual(b.organization_ids,['matched-org']);return Response.json({people:[]})}throw Error('Unexpected call')};
+globalThis.fetch=async(url,options)=>{const b=JSON.parse(options.body);if(url.endsWith('mixed_companies/search'))return Response.json({organizations:[{id:'matched-org',name:atsProspect.company,website_url:'https://example.com',country:'USA'}]});if(String(url).includes('mixed_people/api_search')){const href=decodeURIComponent(String(url).replace(/\+/g,' '));assert.match(href,/person_titles\[\]=CTO/);assert.match(href,/Founder/);assert.match(href,/VP People/);assert.match(href,/Head of Engineering/);assert.match(href,/Global Talent/);assert.match(href,/Talent Acquisition Manager/);assert.match(href,/Director of IT/);assert.match(href,/q_organization_domains_list\[\]=example\.com/);return Response.json({people:[]})}throw Error('Unexpected call')};
 assert.equal((await request('prospect',{id:atsProspect.id,revision:atsProspect.revision,action:'contacts'})).status,400);
 const match=await request('prospect',{id:atsProspect.id,revision:atsProspect.revision,action:'resolve'});assert.equal(match.status,200);assert.equal(match.data.companies[0].id,'matched-org');
 assert.equal((await request('prospect',{id:atsProspect.id,revision:match.data.revision,action:'link',organizationId:'not-offered'})).status,400);
@@ -55,3 +82,64 @@ assert.equal((await request('prospect',{id:atsProspect.id,revision:match.data.re
 atsProspect=(await request('state')).data.prospects.find(p=>p.id===atsProspect.id);assert.equal(atsProspect.apolloId,'matched-org');assert.equal(atsProspect.approval,null);
 assert.equal((await request('prospect',{id:atsProspect.id,revision:atsProspect.revision,action:'contacts'})).status,200);
 console.log('Passed: ATS company requires explicit Apollo match selection before contact lookup.');
+const fresh=new Date(Date.now()-60000).toISOString();
+const budgetBeforeJobs=(await request('state')).data.budget.used;
+globalThis.fetch=async(url)=>{const board=boardResponse(url);if(board)return board;throw Error('Unexpected external call '+url)};
+const jobRefresh=await request('jobs/refresh',{});assert.equal(jobRefresh.status,200);assert.equal(jobRefresh.data.jobs.length,3);assert.equal(jobRefresh.data.added,0);assert.equal(new Set(jobRefresh.data.jobs.map(j=>j.company)).size,3);
+assert.equal((await request('state')).data.budget.used,budgetBeforeJobs);
+const jobId=jobRefresh.data.jobs[0].id;
+assert.equal((await request('jobs/company',{jobId})).status,200);
+assert.equal((await request('jobs/company',{jobId})).data.existing,true);
+assert.equal((await request('jobs/company',{jobId:'fake'})).status,409);
+const kept=(await request('state')).data.jobsFeed.jobs.length;
+globalThis.fetch=async()=>{throw Error('offline')};assert.equal((await request('jobs/refresh',{})).status,502);assert.equal((await request('state')).data.jobsFeed.jobs.length,kept);
+globalThis.fetch=async()=>Response.json({jobs:[]});assert.equal((await request('jobs/refresh',{})).data.jobs.length,0);assert.equal((await request('state')).data.jobsFeed.jobs.length,0);
+console.log('Passed: company list has no 50-job cap, deduplication, failure preservation, empty refresh, save company, no Apollo credits.');
+sqlite.prepare('UPDATE settings SET value=? WHERE key=?').run('0','credits:'+month);
+globalThis.fetch=async(url,options)=>{
+ const b=options?.body?JSON.parse(options.body):{};
+ if(String(url).includes('organizations/enrich'))return Response.json({organization:{id:'matched-org',name:'Northstar',website_url:'https://example.com',primary_domain:'example.com',country:'USA'}});
+ if(String(url).includes('mixed_companies/search'))return Response.json({organizations:[{id:'matched-org',name:'Northstar',website_url:'https://example.com',primary_domain:'example.com',country:'USA'}]});
+ if(String(url).includes('mixed_people/api_search'))return Response.json({people:[{id:'p9',first_name:'Riley',last_name:'Ng',title:'Head of Talent',has_email:true}]});
+ if(String(url).endsWith('people/match'))return Response.json({person:{id:'p9',organization_id:'matched-org',name:'Riley Ng',first_name:'Riley',last_name:'Ng',email:'riley@northstar.example',email_status:'verified',title:'Head of Talent'}});
+ if(String(url).endsWith('/contacts')){assert.equal(b.email,'riley@northstar.example');assert.equal(b.run_dedupe,true);return Response.json({contact:{id:'contact-9'}})}
+ if(String(url).includes('/emailer_campaigns/sequence-1')&&!String(url).includes('add_contact_ids'))return Response.json({emailer_campaign:{id:'sequence-1',name:'Sequence',active:true,num_steps:1}});
+ if(String(url).includes('/add_contact_ids')){assert.equal(b.emailer_campaign_id,undefined);assert.match(String(url),/contact_ids(?:\[\]|%5B%5D)=contact-9/);assert.match(String(url),/send_email_from_email_account_id=mailbox-1/);assert.match(String(url),/sequence_finished_in_other_campaigns=true/);return Response.json({contacts:[{id:'contact-9'}]})}
+ throw Error('Unexpected campaign call '+url);
+};
+let campaignProspect=(await request('state')).data.prospects.find(p=>p.company==='Northstar');
+const resolved=await request('prospect',{id:campaignProspect.id,revision:campaignProspect.revision,action:'resolve'});
+assert.equal((await request('prospect',{id:campaignProspect.id,revision:resolved.data.revision,action:'link',organizationId:'matched-org'})).status,200);
+campaignProspect=(await request('state')).data.prospects.find(p=>p.id===campaignProspect.id);
+assert.equal((await request('prospect',{id:campaignProspect.id,revision:campaignProspect.revision,action:'enrich',contactId:'p9'})).status,200);
+campaignProspect=(await request('state')).data.prospects.find(p=>p.id===campaignProspect.id);
+assert.equal((await request('prospect',{id:campaignProspect.id,revision:campaignProspect.revision,action:'save',subject:campaignProspect.subject,body:campaignProspect.body,evidence:campaignProspect.evidence,fitReviewed:true})).status,200);
+campaignProspect=(await request('state')).data.prospects.find(p=>p.id===campaignProspect.id);
+assert.equal((await request('prospect',{id:campaignProspect.id,revision:campaignProspect.revision,action:'approve'})).status,200);
+campaignProspect=(await request('state')).data.prospects.find(p=>p.id===campaignProspect.id);
+const enrolled=await request('send',{sequenceId:'sequence-1',emailAccountId:'mailbox-1',prospectId:campaignProspect.id});
+assert.equal(enrolled.status,200);assert.equal(enrolled.data.added,1);
+campaignProspect=(await request('state')).data.prospects.find(p=>p.id===campaignProspect.id);
+assert.equal(campaignProspect.stage,'Contacted');assert.equal(campaignProspect.campaign.contactId,'contact-9');
+assert.equal((await request('send',{sequenceId:'sequence-1',emailAccountId:'mailbox-1',prospectId:campaignProspect.id})).status,409);
+console.log('Passed: approved contact is created in Apollo and added to the selected sequence once.');
+sqlite.prepare('UPDATE settings SET value=? WHERE key=?').run('0','credits:'+month);
+let domainProspect=(await request('state')).data.prospects.find(p=>p.company==='Lingo');
+globalThis.fetch=async(url,options)=>{const b=JSON.parse(options.body);assert.equal(options.method,'POST');assert.match(String(url),/mixed_companies\/search$/);assert.deepEqual(b.q_organization_domains_list,['circleci.com']);assert.equal(b.q_organization_name,undefined);return Response.json({organizations:[{id:'circle-city',name:'Circle City Rebar',website_url:'https://circlecityrebar.com'}]})};
+const miss=await request('prospect',{id:domainProspect.id,revision:domainProspect.revision,action:'resolve',domain:'https://www.circleci.com/jobs'});
+assert.equal(miss.status,200);assert.equal(miss.data.notFound,true);assert.equal(miss.data.companies.length,0);assert.equal(miss.data.domain,'circleci.com');
+domainProspect=(await request('state')).data.prospects.find(p=>p.id===domainProspect.id);
+assert.equal(domainProspect.domain,'circleci.com');assert.equal(domainProspect.website,'https://circleci.com');assert.equal(domainProspect.apolloId,null);
+globalThis.fetch=async()=>Response.json({organizations:[{id:'circleci-org',name:'CircleCI',primary_domain:'circleci.com',country:'United States'}]});
+const hit=await request('prospect',{id:domainProspect.id,revision:domainProspect.revision,action:'resolve',domain:'circleci.com'});
+assert.equal(hit.data.companies.length,1);assert.equal(hit.data.companies[0].id,'circleci-org');assert.equal(hit.data.companies[0].domain,'circleci.com');assert.equal(hit.data.companies[0].website,'https://circleci.com');assert.equal(hit.data.notFound,false);
+assert.equal((await request('state')).data.budget.used,2);
+console.log('Passed: domain lookup asks Apollo for that website, drops lookalike names, and reports a missing company.');
+const creditsBeforeWebsite=(await request('state')).data.budget.used;
+globalThis.fetch=async url=>{assert.match(String(url),/autocomplete\.clearbit\.com\/v1\/companies\/suggest\?query=Qualifyze/);return Response.json([{name:'Intiveo',domain:'intiveo.com'},{name:'Qualifyze',domain:'qualifyze.com'}])};
+const site=await request('website',{name:'Qualifyze'});
+assert.equal(site.status,200);assert.equal(site.data.domain,'qualifyze.com');
+assert.equal((await request('state')).data.budget.used,creditsBeforeWebsite);
+globalThis.fetch=async()=>Response.json([{name:'Someone Else',domain:'someoneelse.com'}]);
+assert.equal((await request('website',{name:'Qualifyze'})).data.domain,'');
+console.log('Passed: company website is suggested from the name without an Apollo credit.');
